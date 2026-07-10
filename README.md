@@ -70,7 +70,7 @@ Our backend engine is split into completely decoupled operational pipelines:
 
 ---
 
-### ⏱️ Track 3: Logic & Streak Mechanics *(Your Track)*
+### ⏱️ Track 3: Logic & Streak Mechanics 
 
 * **The Mission:** Code the backend business gamification rules engines to track continuous user interaction, compute elapsed timelines, and award profile assets.
 * **Sandbox Branch:** `feature/gamma-streak-logic`
