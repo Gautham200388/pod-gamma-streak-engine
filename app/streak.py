@@ -7,6 +7,9 @@ def update_streak(
     user: UserProfile,
     current_time: datetime,
 ) -> UserProfile:
+    if user.verified_activity_time is None:
+       return user
+
     if user.last_completion_time is None:
         user.current_streak = 1
         user.last_completion_time = current_time
