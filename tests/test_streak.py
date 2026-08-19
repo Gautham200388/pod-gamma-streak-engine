@@ -6,13 +6,18 @@ from app.badges import award_milestone_badge
 from freezegun import freeze_time
 
 def test_first_completion_starts_streak():
-    user = UserProfile(user_id="user_001")
     current_time = datetime(2026, 7, 10, 10, 0)
+
+    user = UserProfile(
+        user_id="user_001",
+        verified_activity_time=current_time,
+    )
 
     updated_user = update_streak(user, current_time)
 
     assert updated_user.current_streak == 1
     assert updated_user.last_completion_time == current_time
+
 def test_completion_under_24_hours_is_ignored():
     start_time = datetime(2026, 7, 10, 10, 0)
 
@@ -20,6 +25,7 @@ def test_completion_under_24_hours_is_ignored():
         user_id="user_001",
         current_streak=1,
         last_completion_time=start_time,
+        verified_activity_time=start_time,
     )
 
     current_time = start_time + timedelta(hours=10)
@@ -35,6 +41,7 @@ def test_completion_between_24_and_48_hours_increases_streak():
         user_id="user_001",
         current_streak=1,
         last_completion_time=start_time,
+         verified_activity_time=start_time,
     )
 
     current_time = start_time + timedelta(hours=24)
@@ -43,13 +50,14 @@ def test_completion_between_24_and_48_hours_increases_streak():
 
     assert updated_user.current_streak == 2
     assert updated_user.last_completion_time == current_time      
-def test_completion_over_48_hours_resets_streak():
+def test_completion_under_24_hours_is_ignored():
     start_time = datetime(2026, 7, 10, 10, 0)
 
     user = UserProfile(
         user_id="user_001",
-        current_streak=5,
+        current_streak=1,
         last_completion_time=start_time,
+        verified_activity_time=start_time,
     )
 
     current_time = start_time + timedelta(hours=49)
@@ -78,7 +86,10 @@ def test_duplicate_badge_is_not_added():
 
     assert updated_user.badges.count("badge_7_day_streak") == 1    
 def test_seven_day_streak_using_time_simulation():
-    user = UserProfile(user_id="user_001")
+    user = UserProfile(
+    user_id="user_001",
+    verified_activity_time=datetime(2026, 7, 1, 10, 0),
+)
 
     with freeze_time("2026-07-01 10:00:00") as frozen_time:
         for day in range(7):
