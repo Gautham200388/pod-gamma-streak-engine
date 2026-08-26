@@ -2,8 +2,8 @@ from datetime import datetime, timedelta
 
 from app.models import UserProfile
 from app.streak import update_streak
-from app.badges import award_milestone_badge
 from freezegun import freeze_time
+from app.badges import award_milestone_badge, reveal_hidden_badge
 
 def test_first_completion_starts_streak():
     current_time = datetime(2026, 7, 10, 10, 0)
@@ -90,7 +90,7 @@ def test_seven_day_streak_using_time_simulation():
     user_id="user_001",
     verified_activity_time=datetime(2026, 7, 1, 10, 0),
 )
-
+    
     with freeze_time("2026-07-01 10:00:00") as frozen_time:
         for day in range(7):
             current_time = datetime.now()
@@ -101,4 +101,22 @@ def test_seven_day_streak_using_time_simulation():
                 frozen_time.tick(delta=timedelta(hours=24))
 
     assert user.current_streak == 7
-    assert "badge_7_day_streak" in user.badges    
+    assert "badge_7_day_streak" in user.badges
+
+
+def test_hidden_badge_is_revealed_at_required_streak():
+    user = UserProfile(
+        user_id="user_001",
+        current_streak=100,
+    )
+
+    updated_user = reveal_hidden_badge(
+        user,
+        "badge_hidden_100_streak",
+        100,
+    )
+
+    assert "badge_hidden_100_streak" in updated_user.badges
+
+
+   

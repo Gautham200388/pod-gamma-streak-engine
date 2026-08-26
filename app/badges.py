@@ -16,10 +16,33 @@ def load_badge_definitions(config_path: Path = DEFAULT_BADGE_CONFIG) -> dict[int
 
 
 def award_milestone_badge(user: UserProfile) -> UserProfile:
-   badge_definitions = load_badge_definitions()
-   badge_id = badge_definitions.get(user.current_streak)
+    badge_definitions = load_badge_definitions()
 
-   if badge_id is not None and badge_id not in user.badges:
-        user.badges.append(badge_id)
+    reached_badges = [
+        (streak, badge_id)
+        for streak, badge_id in badge_definitions.items()
+        if user.current_streak >= streak
+    ]
 
-   return user
+    if reached_badges:
+        highest_streak, badge_id = max(reached_badges)
+
+        if badge_id not in user.badges:
+            user.badges.append(badge_id)
+
+    return user
+
+def reveal_hidden_badge(
+    user: UserProfile,
+    badge_id: str,
+    required_streak: int,
+) -> UserProfile:
+    """
+    Reveal a hidden badge only after the required verified streak is reached.
+    """
+
+    if user.current_streak >= required_streak:
+        if badge_id not in user.badges:
+            user.badges.append(badge_id)
+
+    return user
