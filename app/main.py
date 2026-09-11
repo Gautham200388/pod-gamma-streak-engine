@@ -1,10 +1,14 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
 from pydantic import BaseModel, Field
 
+from app.models import UserProfile
+from app.streak import update_streak
+from app.badges import award_milestone_badge
 
 app = FastAPI(
     title="CyBreach Pod Gamma API Gateway",
@@ -49,6 +53,15 @@ def seed_corporate_profiles() -> List[dict]:
 
 SYNTHETIC_PROFILES = seed_corporate_profiles()
 
+USERS = {
+    "demo-user": UserProfile(
+        user_id="demo-user",
+        current_streak=7,
+        last_completion_time=datetime.now() - timedelta(hours=24),
+        verified_activity_time=datetime.now() - timedelta(hours=24),
+    )
+}
+
 
 @app.get("/health")
 async def health():
@@ -89,26 +102,53 @@ async def verify_streak(payload: StreakVerificationPayload):
         current_login = datetime.fromisoformat(
             payload.current_login_timestamp.replace("Z", "+00:00")
         )
-
-        elapsed_seconds = (current_login - previous_login).total_seconds()
-        elapsed_days = elapsed_seconds / 86400
-
-        consecutive_login = 0 < elapsed_days <= 1.0
-
     except ValueError:
-        consecutive_login = False
-        elapsed_days = None
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid timestamp format"
+        )
 
-    verified_streak = (
-        payload.active_streak + 1
-        if consecutive_login
-        else 0
+    user = UserProfile(
+        user_id="api-user",
+        current_streak=payload.active_streak,
+        last_completion_time=previous_login,
+        verified_activity_time=previous_login,
     )
+
+    updated_user = update_streak(user, current_login)
 
     return {
         "status": "processed",
-        "consecutive_login": consecutive_login,
         "previous_active_streak": payload.active_streak,
-        "verified_streak": verified_streak,
-        "elapsed_days": elapsed_days,
+        "verified_streak": updated_user.current_streak,
+        "last_completion_time": updated_user.last_completion_time,
+        "verified_activity_time": updated_user.verified_activity_time,
+    }
+@app.get("/user/{user_id}/streak")
+async def get_user_streak(user_id: str):
+    user = USERS.get(user_id)
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "user_id": user.user_id,
+        "current_streak": user.current_streak,
+        "last_completion_time": user.last_completion_time,
+        "verified_activity_time": user.verified_activity_time,
+    }
+
+@app.get("/user/{user_id}/badges")
+async def get_user_badges(user_id: str):
+    user = USERS.get(user_id)
+
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    award_milestone_badge(user)
+
+    return {
+        "user_id": user.user_id,
+        "current_streak": user.current_streak,
+        "badges": user.badges,
     }
