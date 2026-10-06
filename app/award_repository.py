@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +39,7 @@ async def save_award(
     award = BadgeAwardDB(
         badge_id=badge_id,
         tenant_id=tenant_id,
-        awarded_at=datetime.utcnow(),
+        awarded_at=datetime.now(timezone.utc),
         evidence_ref=evidence_ref,
     )
 
@@ -63,3 +63,16 @@ async def save_award(
         raise
 
     return award
+
+
+async def find_awards(
+    session: AsyncSession,
+    tenant_id: str,
+) -> list[BadgeAwardDB]:
+    result = await session.execute(
+        select(BadgeAwardDB)
+        .where(BadgeAwardDB.tenant_id == tenant_id)
+        .order_by(BadgeAwardDB.awarded_at)
+    )
+
+    return list(result.scalars().all())
